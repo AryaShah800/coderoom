@@ -2,7 +2,9 @@
 
 A real-time collaborative code editor. Create a room, share the link, and edit the same file together with live cursors, a shared language setting and shared run output.
 
-> **Status (14 Nov 2026): local build only.** Not deployed yet, so there is no live link. The sync server has not been deployed to Render. Code execution needs a Judge0 endpoint, and **none is configured**: Run returns an honest "not configured" error until `JUDGE0_URL` is set. Successful runs in the tests and screenshots below use **mocked** Judge0 responses.
+> **Status (14 Nov 2026): source code only, not deployed.** There is no live link yet: the app (Vercel) and the sync server (Render) have not been deployed. Code execution needs a Judge0 endpoint, and **none is configured**: Run returns an honest "not configured" error until `JUDGE0_URL` is set. Successful runs in the tests and screenshots below use **mocked** Judge0 responses.
+>
+> Checks re-run on 14 Nov 2026 (Windows, Node 22.20): 63 Vitest tests, 8 sync-server tests and 11 Playwright tests pass; lint, typecheck and build are clean; `npm audit --omit=dev --audit-level=high` reports 0 vulnerabilities for the app and the sync server.
 
 | Asha's browser | Ben's browser (separate browser context) |
 |---|---|
@@ -76,7 +78,7 @@ E2E: `npx playwright install chromium`, then `npm run build` and `npm run test:e
 | `PORT`, `HOST`, `ALLOWED_ORIGINS`, `MAX_PAYLOAD_BYTES`, `MAX_ROOMS`, `MAX_CONNECTIONS_PER_IP`, `ROOM_TTL_MS` | sync server | See `sync-server/.env.example` |
 
 ## CI
-`.github/workflows/ci.yml` has two jobs. **sync-server**: install → test → `npm audit --omit=dev --audit-level=high`. **app**: lint → typecheck → unit tests → `npm audit --omit=dev --audit-level=high` → build (including the bundle check) → Playwright E2E with the real sync server. It has not run on GitHub yet because the repository has not been pushed.
+`.github/workflows/ci.yml` has two jobs. **sync-server**: install → test → `npm audit --omit=dev --audit-level=high`. **app**: lint → typecheck → unit tests → `npm audit --omit=dev --audit-level=high` → build (including the bundle check) → Playwright E2E with the real sync server. It runs on every push and pull request.
 
 ## Known issues and limits
 - **DOMPurify substitution:** the patched sanitizer depends on the build-time alias described above. Remove the alias and `override` once a stable Monaco release ships DOMPurify 3.4.17 or newer (at the time of writing, only the `0.58.0-dev` nightlies do). The bundle check keeps the build honest in the meantime.
