@@ -6,11 +6,9 @@ A real-time collaborative code editor. Create a room, share the link, and edit t
 >
 > Checks re-run on 21 Nov 2026 (Windows, Node 22.20, Edge for Playwright): 87 Vitest tests, 8 sync-server tests (unchanged since 14 Nov) and 15 Playwright tests pass; lint, typecheck and build are clean; `npm audit --omit=dev --audit-level=high` reports 0 vulnerabilities for the app and the sync server.
 
-| Asha's browser | Ben's browser (separate browser context) |
-|---|---|
-| ![Asha's view: Ben's labelled cursor and shared run output](docs/room-asha.png) | ![Ben's view of the same room](docs/room-ben.png) |
+![Two browser windows in one room: Ben types and Asha sees it live with his caret label; Asha adds a line and runs it; both windows show the same output](docs/demo.gif)
 
-*Screenshots taken from the local production build with the real sync server. The "Accepted / Hello, CodeRoom!" output comes from a mocked `/api/run` response.*
+*Two separate browser contexts (left: Asha, right: Ben) against the local production build and the real sync server. Nothing is mocked: the run executes in a Web Worker in Asha's browser and the output reaches Ben through the shared document. Recreate it with `node scripts/record-demo.mjs` (needs ffmpeg; see the header of the script).*
 
 ## How it works
 
@@ -18,10 +16,14 @@ A real-time collaborative code editor. Create a room, share the link, and edit t
 flowchart LR
   A[Browser A<br/>Monaco + y-monaco] <-- Yjs updates + awareness<br/>WebSocket --> S[(sync-server<br/>y-websocket, in memory)]
   B[Browser B<br/>Monaco + y-monaco] <-- WebSocket --> S
-  A -- POST /api/run --> N[Next.js route handler<br/>validate, rate limit, timeout]
-  N -- server-side key --> J[Judge0]
-  A -. result written to Y.Doc .-> S
+  A -- JS / TS / Python --> W[Web Worker in the browser<br/>5 s / 10 s limit, output cap<br/>Python: Pyodide from a pinned CDN version]
+  W -- stdout / stderr --> A
+  A -- Java / C++ / C / Go / Rust<br/>only if JUDGE0_URL is set --> N[Next.js route handler<br/>validate, rate limit, timeout]
+  N -- server-side key --> J[Judge0, optional]
+  A -. run result written to Y.Doc .-> S
 ```
+
+Both browsers hold a full copy of the document (Yjs CRDT), so edits made offline or during a reconnect merge without conflicts. The sync server relays updates and presence and keeps each room in memory only; it is not a database.
 
 - **Next.js 16 App Router + TypeScript + Tailwind CSS 4.** The home page is static. The room page (`/room/[id]`) is a partially prerendered shell; malformed room IDs get a real 404 from `src/proxy.ts`.
 - **Monaco is code-split and bundled from its ESM build.** `next/dynamic` with `ssr: false` loads the editor only on the room page. `src/lib/monaco/runtime.ts` imports Monaco's ESM build (the AMD `min/vs` build is deprecated upstream) and starts its web workers (core editor worker, plus the TypeScript worker for JS/TS completions) from the app's own chunks, with no CDN. `@monaco-editor/react` receives that instance through `loader.config({ monaco })`, and y-monaco's import is aliased to the same module. Local build measurement: the home page loads about 175 KB of gzipped JS with no Monaco; the Monaco chunks (about 0.9 MB gzipped) load only on the room page.
@@ -94,4 +96,4 @@ Deploy-ready configuration is in the repo, but **nothing is deployed**: `vercel.
 - If two people open a brand-new room at the exact same moment, both may seed the starter template (rare).
 - Browser runs are best-effort sandboxed (see above); a determined script can still reach the network through worker prototypes. Do not treat the in-browser runner as a security boundary for untrusted code against the user's own browser origin.
 - Python needs a network connection on the first run to fetch Pyodide from jsDelivr; offline first runs return a clear runner error.
-- Not done yet: deployment itself (config is ready, see Deploy), Lighthouse scores, a two-user GIF, shadcn/ui and Storybook (neither is used in this project).
+- Not done yet: deployment itself (config is ready, see Deploy), Lighthouse scores, shadcn/ui and Storybook (neither is used in this project).

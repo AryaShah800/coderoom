@@ -48,3 +48,4 @@ next-env.d.ts
 
 # local env (only .env.example is committed)
 !.env.example
+/demo-frames/
