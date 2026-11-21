@@ -24,6 +24,7 @@
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "server-only": "^0.0.1",
+    "sucrase": "^3.35.1",
     "y-monaco": "^0.1.6",
     "y-protocols": "^1.0.7",
     "y-websocket": "^3.1.0",

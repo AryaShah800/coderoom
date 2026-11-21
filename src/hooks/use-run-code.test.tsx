@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { http, HttpResponse, delay } from "msw";
 import * as Y from "yjs";
@@ -6,6 +6,19 @@ import { server } from "@/test/msw";
 import { getShared, readLastRun } from "@/lib/collab";
 import { useRoomStore, type Collab } from "@/store/room";
 import { useRunAvailability, useRunCode } from "./use-run-code";
+
+vi.mock("@/lib/runner", () => ({
+  runInBrowser: vi.fn(async () => ({
+    status: { id: 3, description: "Completed" },
+    stdout: "42\n",
+    stderr: "",
+    compileOutput: "",
+    message: "",
+    time: 0.01,
+    memory: null,
+    truncated: false,
+  })),
+}));
 
 const API = "http://localhost:3000/api/run";
 
@@ -19,9 +32,23 @@ beforeEach(() => {
   getShared(doc).text.insert(0, "print(input())");
   const store = useRoomStore.getState();
   store.enterRoom(`r${Math.random()}`);
-  store.setLanguage("python");
+  store.setLanguage("java");
   // The hook only touches collab.doc; the provider is not needed here.
   store.setCollab({ doc, provider: {} } as unknown as Collab);
+});
+
+describe("useRunCode in-browser languages", () => {
+  it("runs JavaScript locally (no /api/run call) and publishes a browser-tagged result", async () => {
+    useRoomStore.getState().setLanguage("javascript");
+    const { text } = getShared(doc);
+    text.delete(0, text.length);
+    text.insert(0, "console.log(6 * 7)");
+    // onUnhandledFrame: "error" proves nothing is sent to the API route.
+    const { result } = renderHook(() => useRunCode("Asha", ""));
+    await act(() => result.current());
+    expect(readLastRun(doc)).toMatchObject({ by: "Asha", language: "javascript", runtime: "browser", result: { stdout: "42\n" } });
+    expect(useRoomStore.getState().isRunning).toBe(false);
+  });
 });
 
 describe("useRunCode", () => {
@@ -51,9 +78,9 @@ describe("useRunCode", () => {
     expect(useRoomStore.getState().isRunning).toBe(true);
     await act(() => pending);
 
-    expect(body).toEqual({ language: "python", source: "print(input())", stdin: "hi" });
+    expect(body).toEqual({ language: "java", source: "print(input())", stdin: "hi" });
     expect(useRoomStore.getState().isRunning).toBe(false);
-    expect(readLastRun(doc)).toMatchObject({ by: "Asha", language: "python", result: { stdout: "hi\n" } });
+    expect(readLastRun(doc)).toMatchObject({ by: "Asha", language: "java", runtime: "judge0", result: { stdout: "hi\n" } });
   });
 
   it("keeps configuration errors local instead of broadcasting them", async () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { getLanguage } from "@/lib/languages";
+import { getLanguage, needsJudge0, type LanguageKey } from "@/lib/languages";
 import { isSuccessfulRun, type RunResult } from "@/lib/run-contract";
 import type { SharedRun } from "@/lib/collab";
 
@@ -10,6 +10,10 @@ interface OutputPanelProps {
   /** null while unknown */
   configured: boolean | null;
   selfName: string;
+  /** Language currently selected in the room (decides which hints apply). */
+  language?: LanguageKey;
+  /** What a run in progress is waiting on, if anything. */
+  phase?: string | null;
 }
 
 const lineCount = (text: string) => (text ? text.replace(/\n$/, "").split("\n").length : 0);
@@ -38,7 +42,7 @@ function Stream({ label, text, tone }: { label: string; text: string; tone?: "ba
   );
 }
 
-export function OutputPanel({ run, isRunning, configured, selfName }: OutputPanelProps) {
+export function OutputPanel({ run, isRunning, configured, selfName, language, phase }: OutputPanelProps) {
   const announcement = isRunning ? "Running code…" : run ? summarizeRun(run, selfName) : "";
 
   return (
@@ -47,7 +51,7 @@ export function OutputPanel({ run, isRunning, configured, selfName }: OutputPane
         {announcement}
       </p>
 
-      {configured === false && !run && (
+      {configured === false && !run && language !== undefined && needsJudge0(language) && (
         <div className="rounded-md border border-warn/30 bg-warn/10 p-3 text-sm text-warn">
           <p className="font-semibold">Run is not configured here</p>
           <p className="mt-1 text-warn/90">
@@ -57,13 +61,16 @@ export function OutputPanel({ run, isRunning, configured, selfName }: OutputPane
       )}
 
       {isRunning && (
-        <div aria-hidden="true" className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
+          {phase && <p className="text-sm text-muted">{phase}</p>}
+          <div aria-hidden="true" className="flex flex-col gap-2">
           <div className="h-3 w-40 animate-pulse rounded bg-line" />
           <div className="h-20 animate-pulse rounded bg-line/60" />
+          </div>
         </div>
       )}
 
-      {!isRunning && !run && configured !== false && (
+      {!isRunning && !run && (language === undefined || !needsJudge0(language) || configured !== false) && (
         <p className="text-sm text-muted">
           Press <kbd className="rounded border border-line-strong px-1 font-mono text-xs">Ctrl</kbd> +{" "}
           <kbd className="rounded border border-line-strong px-1 font-mono text-xs">Enter</kbd> or Run to execute the code.
@@ -97,6 +104,7 @@ export function OutputPanel({ run, isRunning, configured, selfName }: OutputPane
             )}
             <span className="text-muted">
               · {run.by === selfName ? "you" : run.by}, {getLanguage(run.language).label}
+              {run.runtime === "browser" ? " (in browser)" : run.runtime === "judge0" ? " (Judge0)" : ""}
             </span>
           </div>
           <Stream label="Output" text={run.result.stdout} />

@@ -23,9 +23,20 @@ const liveRegion = () => document.querySelector("p[aria-live='polite']");
 
 describe("OutputPanel", () => {
   it("says up front when Run is not configured", () => {
-    render(<OutputPanel run={null} isRunning={false} configured={false} selfName="Me" />);
+    render(<OutputPanel run={null} isRunning={false} configured={false} selfName="Me" language="java" />);
     expect(screen.getByText("Run is not configured here")).toBeInTheDocument();
     expect(screen.getByText(/JUDGE0_URL/)).toBeInTheDocument();
+  });
+
+  it("does not warn about Judge0 for languages that run in the browser", () => {
+    render(<OutputPanel run={null} isRunning={false} configured={false} selfName="Me" language="python" />);
+    expect(screen.queryByText("Run is not configured here")).not.toBeInTheDocument();
+    expect(screen.getByText(/to execute the code/)).toBeInTheDocument();
+  });
+
+  it("shows what a run is waiting on", () => {
+    render(<OutputPanel run={null} isRunning={true} configured={null} selfName="Me" phase="Loading the Python runtime (first run only)…" />);
+    expect(screen.getByText(/Loading the Python runtime/)).toBeInTheDocument();
   });
 
   it("shows a hint before the first run", () => {
