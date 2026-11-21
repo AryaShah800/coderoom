@@ -24,6 +24,8 @@ interface RoomState {
   language: LanguageKey;
   lastRun: SharedRun | null;
   isRunning: boolean;
+  /** What a run is waiting on, e.g. the Python runtime download. */
+  runPhase: string | null;
   collab: Collab | null;
 
   enterRoom: (roomId: string) => void;
@@ -35,6 +37,7 @@ interface RoomState {
   setLanguage: (language: LanguageKey) => void;
   setLastRun: (run: SharedRun | null) => void;
   setRunning: (running: boolean) => void;
+  setRunPhase: (phase: string | null) => void;
   setCollab: (collab: Collab | null) => void;
 }
 
@@ -47,6 +50,7 @@ const initialRoom = {
   language: DEFAULT_LANGUAGE,
   lastRun: null,
   isRunning: false,
+  runPhase: null as string | null,
   collab: null,
 };
 
@@ -64,6 +68,7 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
   setParticipants: (participants) => set({ participants }),
   setLanguage: (language) => set({ language }),
   setLastRun: (lastRun) => set({ lastRun }),
-  setRunning: (isRunning) => set({ isRunning }),
+  setRunning: (isRunning) => set({ isRunning, ...(isRunning ? {} : { runPhase: null }) }),
+  setRunPhase: (runPhase) => set({ runPhase }),
   setCollab: (collab) => set({ collab }),
 }));

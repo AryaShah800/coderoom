@@ -2,8 +2,14 @@ import { test, expect, type Browser, type BrowserContext, type Page } from "@pla
 import { editorText, expectEditorToContain, joinRoom, typeAtEnd } from "./helpers";
 
 /** Two isolated browser contexts = two different people (separate storage, separate sockets). */
-async function twoPeople(browser: Browser) {
+async function twoPeople(browser: Browser, options: { judge0Configured?: boolean } = {}) {
   const contexts: BrowserContext[] = [await browser.newContext(), await browser.newContext()];
+  if (options.judge0Configured) {
+    // Pretend the server has a Judge0 endpoint, so Run is enabled for server-runner languages.
+    await contexts[0]!.route("**/api/run", (route) =>
+      route.request().method() === "GET" ? route.fulfill({ json: { configured: true } }) : route.fallback(),
+    );
+  }
   const [asha, ben] = (await Promise.all(contexts.map((c) => c.newPage()))) as [Page, Page];
   const externalRequests: string[] = [];
   asha.on("request", (r) => {
@@ -81,14 +87,50 @@ test.describe("two people in one room", () => {
     }
   });
 
-  test("a run result is shared with everyone in the room (Judge0 response mocked)", async ({ browser }) => {
+  test("JavaScript runs in the browser and the output is shared (no server runner involved)", async ({ browser }) => {
     const { asha, ben, close } = await twoPeople(browser);
+    try {
+      const apiCalls: string[] = [];
+      for (const page of [asha, ben]) page.on("request", (r) => r.url().includes("/api/run") && r.method() === "POST" && apiCalls.push(r.url()));
+      await expectEditorToContain(asha, "Hello, ${name}!");
+      await expect(asha.getByTestId("runtime-note")).toContainText("Runs in your browser");
+      await asha.getByRole("button", { name: "Run", exact: true }).click();
+
+      await expect(asha.getByRole("region", { name: "Output" })).toContainText("Hello, CodeRoom!");
+      await expect(ben.getByRole("region", { name: "Output" })).toContainText("Hello, CodeRoom!");
+      await expect(ben.getByText(/Asha, JavaScript \(in browser\)/)).toBeVisible();
+      expect(apiCalls).toEqual([]);
+    } finally {
+      await close();
+    }
+  });
+
+  test("an infinite loop is stopped at the time limit and everyone sees why", async ({ browser }) => {
+    const { asha, ben, close } = await twoPeople(browser);
+    try {
+      await expectEditorToContain(asha, "Hello, ${name}!");
+      await asha.locator(".monaco-editor .view-lines").click();
+      await asha.keyboard.press("Control+End");
+      await asha.keyboard.press("Enter");
+      await asha.keyboard.type("while (true) {}");
+      await asha.getByRole("button", { name: "Run", exact: true }).click();
+      await expect(asha.getByText("Time Limit Exceeded", { exact: true })).toBeVisible({ timeout: 20_000 });
+      await expect(ben.getByText("Time Limit Exceeded", { exact: true })).toBeVisible();
+      // The page is still responsive and can run again.
+      await expect(asha.getByRole("button", { name: "Run", exact: true })).toBeEnabled();
+    } finally {
+      await close();
+    }
+  });
+
+  test("a run result is shared with everyone in the room (Judge0 response mocked)", async ({ browser }) => {
+    const { asha, ben, close } = await twoPeople(browser, { judge0Configured: true });
     try {
       await asha.route("**/api/run", async (route) => {
         if (route.request().method() !== "POST") return route.fallback();
         const body = route.request().postDataJSON() as { language: string; source: string };
-        expect(body.language).toBe("javascript");
-        expect(body.source).toContain("greet");
+        expect(body.language).toBe("java");
+        expect(body.source).toContain("Hello, CodeRoom!");
         await route.fulfill({
           json: {
             status: { id: 3, description: "Accepted" },
@@ -103,13 +145,15 @@ test.describe("two people in one room", () => {
         });
       });
       await expectEditorToContain(asha, "Hello, ${name}!");
+      await asha.getByLabel("Language").selectOption("java");
+      await expect(ben.getByLabel("Language")).toHaveValue("java");
       await asha.getByRole("button", { name: "Run", exact: true }).click();
 
       await expect(asha.getByRole("region", { name: "Output" })).toContainText("Hello, CodeRoom!");
       await expect(asha.getByText("Accepted", { exact: true })).toBeVisible();
       // Ben never called the API, but sees the same output via the shared Y.Doc.
       await expect(ben.getByRole("region", { name: "Output" })).toContainText("Hello, CodeRoom!");
-      await expect(ben.getByText(/Asha, JavaScript/)).toBeVisible();
+      await expect(ben.getByText(/Asha, Java \(Judge0\)/)).toBeVisible();
       await expect(ben.locator("p[role='status'][aria-live='polite']").filter({ hasText: "Asha's run finished" })).toBeAttached();
     } finally {
       await close();
@@ -117,13 +161,16 @@ test.describe("two people in one room", () => {
   });
 });
 
-test("Run reports honestly that Judge0 is not configured (real /api/run, no mock)", async ({ page }) => {
+test("Java is editor-only without Judge0: Run is disabled with the reason, and the API says so (no mock)", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Create a room" }).click();
   await page.waitForURL(/\/room\//);
   await joinRoom(page, "Solo", "Green");
 
+  await page.getByLabel("Language").selectOption("java");
   await expect(page.getByText("This server has no Judge0 endpoint set")).toBeVisible();
+  await expect(page.getByTestId("runtime-note")).toContainText("Editor only here");
+  await expect(page.getByRole("button", { name: "Run", exact: true })).toBeDisabled();
   await page.locator(".monaco-editor .view-lines").click();
   await page.keyboard.press("Control+Enter");
   const alert = page.getByRole("alert").filter({ hasText: "Run is not configured here" });

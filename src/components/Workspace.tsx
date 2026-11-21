@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useId, useState } from "react";
 import { changeLanguage } from "@/lib/collab";
+import { needsJudge0, runtimeNote } from "@/lib/languages";
 import { MAX_STDIN_CHARS } from "@/lib/run-contract";
 import type { ParticipantIdentity } from "@/lib/participants";
 import { useCollaboration } from "@/hooks/use-collaboration";
@@ -25,10 +26,13 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
   const language = useRoomStore((s) => s.language);
   const isRunning = useRoomStore((s) => s.isRunning);
   const lastRun = useRoomStore((s) => s.lastRun);
+  const runPhase = useRoomStore((s) => s.runPhase);
   const configured = useRunAvailability();
   const [stdin, setStdin] = useState("");
   const run = useRunCode(identity.name, stdin);
   const stdinId = useId();
+  const noteId = useId();
+  const runBlocked = needsJudge0(language) && configured === false;
 
   return (
     <div className="flex h-dvh flex-col">
@@ -58,18 +62,22 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
             <h2 id="editor-heading" className="sr-only">
               Editor
             </h2>
-            <LanguageSelect value={language} onChange={(next) => collab && changeLanguage(collab.doc, next)} disabled={!collab} />
+            <LanguageSelect value={language} onChange={(next) => collab && changeLanguage(collab.doc, next)} disabled={!collab} judge0Configured={configured} />
             <button
               type="button"
               onClick={() => void run()}
-              disabled={!collab || isRunning}
+              disabled={!collab || isRunning || runBlocked}
+              aria-describedby={noteId}
               aria-keyshortcuts="Control+Enter Meta+Enter"
               className="inline-flex h-8 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-accent-ink transition hover:brightness-110 disabled:opacity-60"
             >
               <span aria-hidden="true">▶</span>
               {isRunning ? "Running…" : "Run"}
             </button>
-            <p className="ml-auto hidden text-xs text-muted xl:block">
+            <p id={noteId} data-testid="runtime-note" className="min-w-0 basis-full text-xs text-muted sm:basis-auto sm:flex-1">
+              {runtimeNote(language, configured)}
+            </p>
+            <p className="ml-auto hidden text-xs text-muted 2xl:block">
               <kbd className="font-mono">Ctrl+M</kbd> lets Tab leave the editor
             </p>
           </div>
@@ -102,7 +110,7 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
           <h2 id="output-heading" className="text-sm font-semibold">
             Output
           </h2>
-          <OutputPanel run={lastRun} isRunning={isRunning} configured={configured} selfName={identity.name} />
+          <OutputPanel run={lastRun} isRunning={isRunning} configured={configured} selfName={identity.name} language={language} phase={runPhase} />
         </aside>
       </main>
     </div>
