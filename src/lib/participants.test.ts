@@ -62,3 +62,40 @@ describe("remote cursor CSS", () => {
     expect(css).not.toContain("yRemoteSelection-1{");
   });
 });
+
+describe("duplicate names", () => {
+  it("keeps the earliest joiner's name and numbers the rest", () => {
+    const states = new Map<number, Record<string, unknown>>([
+      [30, { user: { name: "Sam", color: "#4ade80" } }],
+      [10, { user: { name: "Sam", color: "#38bdf8" } }],
+      [20, { user: { name: "Sam", color: "#f472b6" } }],
+      [40, { user: { name: "Ann", color: "#f472b6" } }],
+    ]);
+    const byId = Object.fromEntries(participantsFromAwareness(states, 99).map((p) => [p.clientId, p.name]));
+    expect(byId).toEqual({ 10: "Sam", 20: "Sam (2)", 30: "Sam (3)", 40: "Ann" });
+  });
+});
+
+describe("remote cursor label visibility", () => {
+  const people = [
+    { clientId: 5, name: "Ben", color: "#38bdf8", isSelf: false },
+    { clientId: 6, name: "Cy", color: "#4ade80", isSelf: false },
+  ];
+  const label = (css: string, id: number) => css.split("}").find((l) => l.trim().startsWith(`.yRemoteSelectionHead-${id}::after`)) ?? "";
+
+  it("shows every label when no activity filter is given (default)", () => {
+    const css = remoteCursorCss(people);
+    expect(label(css, 5)).toContain("opacity:1");
+    expect(label(css, 6)).toContain("opacity:1");
+  });
+
+  it("fades idle labels but keeps the caret rule, and keeps the followed person's label", () => {
+    const css = remoteCursorCss(people, new Set([5]), 6);
+    expect(label(css, 5)).toContain("opacity:1");
+    expect(label(css, 6)).toContain("opacity:1"); // followed
+    const idle = remoteCursorCss(people, new Set(), null);
+    expect(label(idle, 5)).toContain("opacity:0");
+    expect(idle).toContain(".yRemoteSelectionHead-5{position:absolute");
+    expect(idle).toContain("prefers-reduced-motion");
+  });
+});

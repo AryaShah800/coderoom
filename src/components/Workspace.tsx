@@ -16,7 +16,7 @@ import { EditorSkeleton } from "./EditorSkeleton";
 import { LanguageSelect } from "./LanguageSelect";
 import { Logo } from "./Logo";
 import { OutputPanel } from "./OutputPanel";
-import { ParticipantList, RemoteCursorStyles } from "./ParticipantList";
+import { FollowBanner, ParticipantList, RemoteCursorStyles } from "./ParticipantList";
 
 // Monaco (~several MB) is split out of the main bundle and never rendered on the server.
 const CodeEditor = dynamic(() => import("./CodeEditor"), { ssr: false, loading: () => <EditorSkeleton /> });
@@ -55,6 +55,7 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
         </div>
       </header>
       <ConnectionBanner />
+      <FollowBanner />
 
       <main id="main" className="grid min-h-0 flex-1 grid-rows-[minmax(320px,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_380px] lg:grid-rows-1">
         <section aria-labelledby="editor-heading" className="flex min-h-0 flex-col border-line lg:border-r">

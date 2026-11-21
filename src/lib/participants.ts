@@ -68,6 +68,14 @@ export function participantsFromAwareness(
     if (!name) continue;
     list.push({ clientId, name, color: sanitizeColor(user.color), isSelf: clientId === selfId });
   }
+  // Two people can pick the same name: the one who joined first (lowest client id) keeps it,
+  // the others get " (2)", " (3)" so labels and avatars stay distinguishable.
+  const counts = new Map<string, number>();
+  for (const p of [...list].sort((a, b) => a.clientId - b.clientId)) {
+    const n = (counts.get(p.name) ?? 0) + 1;
+    counts.set(p.name, n);
+    if (n > 1) p.name = `${p.name} (${n})`;
+  }
   return list.sort((a, b) => Number(b.isSelf) - Number(a.isSelf) || a.name.localeCompare(b.name));
 }
 
@@ -80,17 +88,26 @@ export function cssString(value: string): string {
  * CSS for y-monaco's remote selection decorations: a tinted selection, a coloured caret
  * and a name label above the caret for every remote participant.
  */
-export function remoteCursorCss(participants: Participant[]): string {
-  return participants
+export function remoteCursorCss(
+  participants: Participant[],
+  /** Clients whose label is shown now; omit to show every label. Others fade out (caret stays). */
+  visibleIds?: ReadonlySet<number>,
+  /** The followed collaborator keeps a visible label. */
+  followId: number | null = null,
+): string {
+  const rules = participants
     .filter((p) => !p.isSelf)
     .map((p) => {
       const id = Math.trunc(p.clientId);
       const color = sanitizeColor(p.color);
+      const shown = !visibleIds || visibleIds.has(id) || followId === id;
       return [
         `.yRemoteSelection-${id}{background-color:${color}40;}`,
         `.yRemoteSelectionHead-${id}{position:absolute;box-sizing:border-box;height:100%;border-left:2px solid ${color};}`,
-        `.yRemoteSelectionHead-${id}::after{content:${cssString(sanitizeName(p.name))};position:absolute;left:-2px;top:-1.35em;padding:0 4px;border-radius:3px 3px 3px 0;background:${color};color:#0b0d10;font:600 11px/1.35em ui-sans-serif,system-ui,sans-serif;white-space:nowrap;pointer-events:none;z-index:10;}`,
+        `.yRemoteSelectionHead-${id}::after{content:${cssString(sanitizeName(p.name))};position:absolute;left:-2px;top:-1.35em;padding:0 4px;border-radius:3px 3px 3px 0;background:${color};color:#0b0d10;font:600 11px/1.35em ui-sans-serif,system-ui,sans-serif;white-space:nowrap;pointer-events:none;z-index:10;opacity:${shown ? 1 : 0};transition:opacity .3s ease;}`,
       ].join("");
     })
     .join("\n");
+  const reduced = "@media (prefers-reduced-motion:reduce){[class*='yRemoteSelectionHead-']::after{transition:none !important;}}";
+  return rules ? `${rules}\n${reduced}` : rules;
 }

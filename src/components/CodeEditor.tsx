@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Editor, { loader, type BeforeMount, type OnMount } from "@monaco-editor/react";
 import type { editor as MonacoEditor } from "monaco-editor";
 import { getShared } from "@/lib/collab";
+import { remoteCursorIndex } from "@/lib/presence";
 import { monaco } from "@/lib/monaco/runtime";
 import { getLanguage } from "@/lib/languages";
 import { useRoomStore } from "@/store/room";
@@ -69,6 +70,24 @@ export default function CodeEditor({ onRun }: { onRun: () => void }) {
       binding?.destroy();
     };
   }, [editor, collab]);
+
+  // Follow mode: keep the followed collaborator's caret in view whenever it moves.
+  const followId = useRoomStore((s) => s.followId);
+  useEffect(() => {
+    if (!editor || !collab || followId === null) return;
+    const { awareness } = collab.provider;
+    const { text } = getShared(collab.doc);
+    const reveal = () => {
+      const model = editor.getModel();
+      const index = remoteCursorIndex(collab.doc, text, awareness.getStates().get(followId) as Record<string, unknown> | undefined);
+      if (!model || index === null) return;
+      // Immediate (1) rather than smooth, so tests and fast typists do not chase a moving target.
+      editor.revealPositionInCenterIfOutsideViewport(model.getPositionAt(index), 1);
+    };
+    reveal();
+    awareness.on("update", reveal);
+    return () => awareness.off("update", reveal);
+  }, [editor, collab, followId]);
 
   return (
     <Editor
