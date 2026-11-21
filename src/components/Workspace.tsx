@@ -12,6 +12,8 @@ import { useRunAvailability, useRunCode } from "@/hooks/use-run-code";
 import { useRoomStore } from "@/store/room";
 import { ConnectionBanner, ConnectionStatus } from "./ConnectionStatus";
 import { CopyLinkButton } from "./CopyLinkButton";
+import { ExportButton, RoomLifetimeNotice } from "./ExportButton";
+import { ROOM_EMPTY_TTL_MINUTES } from "@/lib/config";
 import { EditorSkeleton } from "./EditorSkeleton";
 import { LanguageSelect } from "./LanguageSelect";
 import { Logo } from "./Logo";
@@ -46,6 +48,7 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
           </span>
         </div>
         <CopyLinkButton roomId={roomId} />
+        <ExportButton roomId={roomId} />
         <div className="ml-auto flex items-center gap-3">
           <ConnectionStatus />
           <ParticipantList />
@@ -55,6 +58,7 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
         </div>
       </header>
       <ConnectionBanner />
+      <RoomLifetimeNotice ttlMinutes={ROOM_EMPTY_TTL_MINUTES} />
       <FollowBanner />
 
       <main id="main" className="grid min-h-0 flex-1 grid-rows-[minmax(320px,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_380px] lg:grid-rows-1">
