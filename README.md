@@ -80,6 +80,9 @@ E2E: `npx playwright install chromium` (or set `PW_CHANNEL=msedge` to use an ins
 | `JUDGE0_URL`, `JUDGE0_AUTH_TOKEN`, `JUDGE0_RAPIDAPI_KEY`, `JUDGE0_RAPIDAPI_HOST`, `JUDGE0_TIMEOUT_MS` | app, server only | Code execution. Unset = Run answers 503 `not_configured` |
 | `PORT`, `HOST`, `ALLOWED_ORIGINS`, `MAX_PAYLOAD_BYTES`, `MAX_ROOMS`, `MAX_CONNECTIONS_PER_IP`, `ROOM_TTL_MS` | sync server | See `sync-server/.env.example` |
 
+## Deploy
+Deploy-ready configuration is in the repo, but **nothing is deployed**: `vercel.json` (app), `render.yaml` (sync server only) and `docs/DEPLOY.md` (order of operations, every environment variable, free-tier caveats, how to verify). Creating the services needs your own Vercel and Render (or Fly.io) accounts. `src/lib/deploy-config.test.ts` checks that the config files are consistent with the code (build command, start script, health check, `ALLOWED_ORIGINS` not hard-coded, every variable documented).
+
 ## CI
 `.github/workflows/ci.yml` has two jobs. **sync-server**: install → test → `npm audit --omit=dev --audit-level=high`. **app**: lint → typecheck → unit tests → `npm audit --omit=dev --audit-level=high` → build (including the bundle check) → Playwright E2E with the real sync server. It runs on every push and pull request.
 
@@ -91,4 +94,4 @@ E2E: `npx playwright install chromium` (or set `PW_CHANNEL=msedge` to use an ins
 - If two people open a brand-new room at the exact same moment, both may seed the starter template (rare).
 - Browser runs are best-effort sandboxed (see above); a determined script can still reach the network through worker prototypes. Do not treat the in-browser runner as a security boundary for untrusted code against the user's own browser origin.
 - Python needs a network connection on the first run to fetch Pyodide from jsDelivr; offline first runs return a clear runner error.
-- Not done yet: deployment (Vercel + Render), Lighthouse scores, a two-user GIF, shadcn/ui and Storybook (neither is used in this project).
+- Not done yet: deployment itself (config is ready, see Deploy), Lighthouse scores, a two-user GIF, shadcn/ui and Storybook (neither is used in this project).
