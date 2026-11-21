@@ -34,7 +34,10 @@ describe("deploy configuration", () => {
     for (const name of names) expect(doc, `${name} missing from docs/DEPLOY.md`).toContain(name);
   });
 
-  it("states that nothing is deployed", () => {
-    expect(read("docs/DEPLOY.md")).toContain("Nothing here has been deployed yet");
+  it("documents the live deployment and its health check", () => {
+    const deploy = read("docs/DEPLOY.md");
+    expect(deploy).toContain("https://coderoom-aryashah.vercel.app");
+    expect(deploy).toContain("https://coderoom-sync.onrender.com");
+    expect(read("README.md")).toContain("https://coderoom-aryashah.vercel.app");
   });
 });
