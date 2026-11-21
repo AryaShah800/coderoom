@@ -17,6 +17,8 @@ export interface SharedRun {
   by: string;
   language: LanguageKey;
   at: number;
+  /** Where it ran. Absent on runs from older clients. */
+  runtime?: "browser" | "judge0";
   result?: RunResult;
   error?: RunErrorBody["error"];
 }
@@ -72,6 +74,7 @@ export function readLastRun(doc: Y.Doc): SharedRun | null {
     by: sanitizeName(raw.by) || "Someone",
     language: raw.language,
     at: raw.at,
+    ...(raw.runtime === "browser" || raw.runtime === "judge0" ? { runtime: raw.runtime } : {}),
     ...(hasResult ? { result: raw.result } : {}),
     ...(hasError ? { error: raw.error } : {}),
   };

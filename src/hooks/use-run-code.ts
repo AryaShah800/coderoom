@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getShared, publishRun, type SharedRun } from "@/lib/collab";
 import { requestRun } from "@/lib/run-client";
+import { runInBrowser, type BrowserLanguage } from "@/lib/runner";
+import { getLanguage } from "@/lib/languages";
 import { useRoomStore } from "@/store/room";
 
 /** Whether this deployment has Judge0 configured (GET /api/run). null = unknown. */
@@ -31,17 +33,28 @@ export function useRunCode(selfName: string, stdin: string) {
   useEffect(() => () => inFlight.current?.abort(), []);
 
   return useCallback(async () => {
-    const { collab, language, isRunning, setRunning, setLastRun } = useRoomStore.getState();
+    const { collab, language, isRunning, setRunning, setLastRun, setRunPhase } = useRoomStore.getState();
     if (!collab || isRunning) return;
     const source = getShared(collab.doc).text.toString();
     const controller = new AbortController();
     inFlight.current = controller;
     setRunning(true);
     try {
+      const info = getLanguage(language);
+      if (info.runtime === "browser") {
+        const result = await runInBrowser(info.key as BrowserLanguage, source, stdin, {
+          signal: controller.signal,
+          onPhase: setRunPhase,
+        });
+        if (!controller.signal.aborted) {
+          publishRun(collab.doc, { by: selfName, language, at: Date.now(), runtime: "browser", result });
+        }
+        return;
+      }
       const outcome = await requestRun({ language, source, stdin }, controller.signal);
       const run: SharedRun = outcome.ok
-        ? { by: selfName, language, at: Date.now(), result: outcome.result }
-        : { by: selfName, language, at: Date.now(), error: outcome.error as SharedRun["error"] };
+        ? { by: selfName, language, at: Date.now(), runtime: "judge0", result: outcome.result }
+        : { by: selfName, language, at: Date.now(), runtime: "judge0", error: outcome.error as SharedRun["error"] };
       // Configuration and validation problems are local to this person; real results are shared.
       if (outcome.ok || outcome.error.code === "upstream_timeout" || outcome.error.code === "upstream_error") {
         publishRun(collab.doc, run);

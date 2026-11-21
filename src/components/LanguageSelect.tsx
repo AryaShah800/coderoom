@@ -3,13 +3,17 @@
 import { useId } from "react";
 import { LANGUAGES, isLanguageKey, type LanguageKey } from "@/lib/languages";
 
+const suffix = (runtime: "browser" | "judge0", judge0Configured: boolean | null | undefined) =>
+  runtime === "browser" ? " · runs in browser" : judge0Configured ? " · server (Judge0)" : " · editor only";
+
 interface LanguageSelectProps {
   value: LanguageKey;
   onChange: (language: LanguageKey) => void;
   disabled?: boolean;
+  judge0Configured?: boolean | null;
 }
 
-export function LanguageSelect({ value, onChange, disabled }: LanguageSelectProps) {
+export function LanguageSelect({ value, onChange, disabled, judge0Configured }: LanguageSelectProps) {
   const id = useId();
   return (
     <div className="flex items-center gap-2">
@@ -28,6 +32,7 @@ export function LanguageSelect({ value, onChange, disabled }: LanguageSelectProp
         {LANGUAGES.map((language) => (
           <option key={language.key} value={language.key}>
             {language.label}
+            {suffix(language.runtime, judge0Configured)}
           </option>
         ))}
       </select>
