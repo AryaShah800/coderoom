@@ -4,6 +4,7 @@ import type { WebsocketProvider } from "y-websocket";
 import { DEFAULT_LANGUAGE, type LanguageKey } from "@/lib/languages";
 import type { Participant } from "@/lib/participants";
 import type { SharedRun } from "@/lib/collab";
+import type { PresenceSnapshot } from "@/lib/presence";
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected";
 
@@ -24,6 +25,10 @@ interface RoomState {
   language: LanguageKey;
   lastRun: SharedRun | null;
   isRunning: boolean;
+  /** Who moved or typed recently (label visibility, typing indicator). */
+  presence: PresenceSnapshot;
+  /** Client id of the collaborator whose caret this person follows. */
+  followId: number | null;
   /** What a run is waiting on, e.g. the Python runtime download. */
   runPhase: string | null;
   collab: Collab | null;
@@ -37,6 +42,8 @@ interface RoomState {
   setLanguage: (language: LanguageKey) => void;
   setLastRun: (run: SharedRun | null) => void;
   setRunning: (running: boolean) => void;
+  setPresence: (presence: PresenceSnapshot) => void;
+  follow: (clientId: number | null) => void;
   setRunPhase: (phase: string | null) => void;
   setCollab: (collab: Collab | null) => void;
 }
@@ -50,6 +57,8 @@ const initialRoom = {
   language: DEFAULT_LANGUAGE,
   lastRun: null,
   isRunning: false,
+  presence: { active: [], typing: [] } as PresenceSnapshot,
+  followId: null as number | null,
   runPhase: null as string | null,
   collab: null,
 };
@@ -70,5 +79,7 @@ export const useRoomStore = create<RoomState>()((set, get) => ({
   setLastRun: (lastRun) => set({ lastRun }),
   setRunning: (isRunning) => set({ isRunning, ...(isRunning ? {} : { runPhase: null }) }),
   setRunPhase: (runPhase) => set({ runPhase }),
+  setPresence: (presence) => set({ presence }),
+  follow: (followId) => set({ followId }),
   setCollab: (collab) => set({ collab }),
 }));
