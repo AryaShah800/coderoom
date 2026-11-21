@@ -1,0 +1,23 @@
+# Render Blueprint for the CodeRoom sync server (y-websocket relay) only.
+# The Next.js app is deployed separately (Vercel, see vercel.json and docs/DEPLOY.md).
+# Not deployed from this repo: creating the service needs your Render account.
+services:
+  - type: web
+    name: coderoom-sync
+    runtime: node
+    plan: free
+    rootDir: sync-server
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: HOST
+        value: 0.0.0.0
+      # Set this in the Render dashboard to the exact origin(s) of the deployed app,
+      # e.g. https://coderoom-yourname.vercel.app (comma-separated, no trailing slash).
+      - key: ALLOWED_ORIGINS
+        sync: false
+      - key: ROOM_TTL_MS
+        value: "1800000"
