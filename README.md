@@ -2,7 +2,9 @@
 
 A real-time collaborative code editor. Create a room, share the link, and edit the same file together with live cursors, a shared language setting and shared run output.
 
-> **Status (14 Nov 2026): source code only, not deployed.** There is no live link yet: the app (Vercel) and the sync server (Render) have not been deployed. **Run works without any server or account for JavaScript, TypeScript and Python** (in the browser, see "Running code" below). Java, C++, C, Go and Rust are editor-only unless a Judge0 endpoint is configured through `JUDGE0_URL`; none is configured here, and the Judge0 success path is only exercised with mocked responses.
+> **Live demo: https://coderoom-aryashah.vercel.app** (app on Vercel, sync server on Render's free tier: the first visit after a quiet period can take up to a minute while the sync server wakes up). Open the same room link in two browsers to try it. **Run works without any account for JavaScript, TypeScript and Python** (in the browser, see "Running code" below). Java, C++, C, Go and Rust are editor-only: no Judge0 endpoint is configured on the live site, and the Judge0 success path is only exercised with mocked responses.
+>
+> Live check on 21 Nov 2026: a two-browser Playwright smoke test against the deployed site (create room, join from a second context, edits both ways, shared JS run output) passed.
 >
 > Checks re-run on 21 Nov 2026 (Windows, Node 22.20, Edge for Playwright): 87 Vitest tests, 8 sync-server tests (unchanged since 14 Nov) and 15 Playwright tests pass; lint, typecheck and build are clean; `npm audit --omit=dev --audit-level=high` reports 0 vulnerabilities for the app and the sync server.
 
@@ -83,7 +85,7 @@ E2E: `npx playwright install chromium` (or set `PW_CHANNEL=msedge` to use an ins
 | `PORT`, `HOST`, `ALLOWED_ORIGINS`, `MAX_PAYLOAD_BYTES`, `MAX_ROOMS`, `MAX_CONNECTIONS_PER_IP`, `ROOM_TTL_MS` | sync server | See `sync-server/.env.example` |
 
 ## Deploy
-Deploy-ready configuration is in the repo, but **nothing is deployed**: `vercel.json` (app), `render.yaml` (sync server only) and `docs/DEPLOY.md` (order of operations, every environment variable, free-tier caveats, how to verify). Creating the services needs your own Vercel and Render (or Fly.io) accounts. `src/lib/deploy-config.test.ts` checks that the config files are consistent with the code (build command, start script, health check, `ALLOWED_ORIGINS` not hard-coded, every variable documented).
+Deployed on 21 Nov 2026 from `main` with this configuration: `vercel.json` (app), `render.yaml` (sync server only) and `docs/DEPLOY.md` (order of operations, every environment variable, free-tier caveats, how to verify). `src/lib/deploy-config.test.ts` checks that the config files are consistent with the code (build command, start script, health check, `ALLOWED_ORIGINS` not hard-coded, every variable documented).
 
 ## CI
 `.github/workflows/ci.yml` has two jobs. **sync-server**: install → test → `npm audit --omit=dev --audit-level=high`. **app**: lint → typecheck → unit tests → `npm audit --omit=dev --audit-level=high` → build (including the bundle check) → Playwright E2E with the real sync server. It runs on every push and pull request.

@@ -1,6 +1,6 @@
 # Deploying CodeRoom
 
-CodeRoom is two services. **Nothing here has been deployed yet**: this repo only holds the configuration. Creating the services needs your own Vercel and Render (or Fly.io) accounts.
+CodeRoom is two services. Live since 21 Nov 2026: app https://coderoom-aryashah.vercel.app, sync server https://coderoom-sync.onrender.com (`/healthz`).
 
 | Service | Runs | Host used in the config | Why separate |
 |---|---|---|---|
