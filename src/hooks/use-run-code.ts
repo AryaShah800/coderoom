@@ -25,14 +25,25 @@ export function useRunAvailability() {
 
 /**
  * Runs the shared code through /api/run and publishes the result into the Y.Doc,
- * so every participant sees the same output.
+ * so every participant sees the same output. `cancel` stops this person's run.
  */
 export function useRunCode(selfName: string, stdin: string) {
   const inFlight = useRef<AbortController | null>(null);
 
   useEffect(() => () => inFlight.current?.abort(), []);
 
-  return useCallback(async () => {
+  const cancel = useCallback(() => {
+    const controller = inFlight.current;
+    if (!controller) return;
+    // Release the UI now; the aborted run settles in the background and publishes nothing.
+    inFlight.current = null;
+    controller.abort();
+    const { setRunning, setRunPhase } = useRoomStore.getState();
+    setRunPhase(null);
+    setRunning(false);
+  }, []);
+
+  const run = useCallback(async () => {
     const { collab, language, isRunning, setRunning, setLastRun, setRunPhase } = useRoomStore.getState();
     if (!collab || isRunning) return;
     const source = getShared(collab.doc).text.toString();
@@ -64,8 +75,14 @@ export function useRunCode(selfName: string, stdin: string) {
     } catch (error) {
       if ((error as { name?: string })?.name !== "AbortError") throw error;
     } finally {
-      if (inFlight.current === controller) inFlight.current = null;
-      useRoomStore.getState().setRunning(false);
+      // Only the run that is still current may clear the running flag; a cancelled run
+      // settling late must not end a newer run's "Running…" state.
+      if (inFlight.current === controller) {
+        inFlight.current = null;
+        useRoomStore.getState().setRunning(false);
+      }
     }
   }, [selfName, stdin]);
+
+  return { run, cancel };
 }

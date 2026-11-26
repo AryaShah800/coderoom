@@ -31,7 +31,7 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
   const runPhase = useRoomStore((s) => s.runPhase);
   const configured = useRunAvailability();
   const [stdin, setStdin] = useState("");
-  const run = useRunCode(identity.name, stdin);
+  const { run, cancel } = useRunCode(identity.name, stdin);
   const stdinId = useId();
   const noteId = useId();
   const runBlocked = needsJudge0(language) && configured === false;
@@ -83,6 +83,16 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
               <span aria-hidden="true">▶</span>
               {isRunning ? "Running…" : "Run"}
             </button>
+            {isRunning && (
+              <button
+                type="button"
+                onClick={cancel}
+                className="inline-flex h-8 items-center gap-2 rounded-md border border-line-strong bg-panel-2 px-3 text-sm font-medium transition hover:border-bad hover:text-bad"
+              >
+                <span aria-hidden="true">■</span>
+                Stop
+              </button>
+            )}
             <p id={noteId} data-testid="runtime-note" className="min-w-0 basis-full text-xs text-muted sm:basis-auto sm:flex-1">
               {runtimeNote(language, configured)}
             </p>

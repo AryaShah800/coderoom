@@ -72,6 +72,8 @@ function collect(worker: WorkerLike, timeoutMs: number, signal?: AbortSignal): P
     );
     const onAbort = () => settle(STATUS.runtime, { message: "Stopped." });
     signal?.addEventListener("abort", onAbort);
+    // An already-aborted signal never fires "abort", so settle right away.
+    if (signal?.aborted) onAbort();
 
     worker.onmessage = ({ data }: { data: FromWorker }) => {
       if (data.type === "out") {
@@ -188,6 +190,8 @@ export class PythonRunner {
     } finally {
       onPhase?.(null);
     }
+    // Stopped while the runtime was loading: never send the code to the worker.
+    if (signal?.aborted) return { ...emptyResult(STATUS.runtime), message: "Stopped." };
     const worker = this.worker;
     if (!worker) return { ...emptyResult(STATUS.internal), message: "Python runtime is not available." };
     // The execution clock starts only now, after the runtime is ready.

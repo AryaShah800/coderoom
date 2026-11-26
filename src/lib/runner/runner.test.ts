@@ -190,6 +190,19 @@ describe("PythonRunner protocol", () => {
     expect(phases.filter((p) => p !== null)).toHaveLength(1);
   });
 
+  it("never sends the code when stopped while the runtime is loading", async () => {
+    const { factory, created } = fakePythonFactory((m, reply) => {
+      if (m.type === "init") setTimeout(() => reply({ type: "ready" }), 50);
+      else reply({ type: "done", ok: true });
+    });
+    const controller = new AbortController();
+    const pending = new PythonRunner(factory).run("print('x')", "", { signal: controller.signal });
+    controller.abort();
+    const result = await pending;
+    expect(result.message).toBe("Stopped.");
+    expect(created[0].sent.map((m) => m.type)).toEqual(["init"]);
+  });
+
   it("starts the execution clock only after the runtime is ready", async () => {
     // Loading takes 150 ms; the exec timeout is 100 ms. A clock started too early would time out.
     const { factory } = fakePythonFactory((m, reply) => {
