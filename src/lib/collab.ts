@@ -75,7 +75,26 @@ export function readLastRun(doc: Y.Doc): SharedRun | null {
     language: raw.language,
     at: raw.at,
     ...(raw.runtime === "browser" || raw.runtime === "judge0" ? { runtime: raw.runtime } : {}),
-    ...(hasResult ? { result: raw.result } : {}),
-    ...(hasError ? { error: raw.error } : {}),
+    ...(hasResult ? { result: normalizeRunResult(raw.result as Partial<RunResult>) } : {}),
+    ...(hasError ? { error: { code: String(raw.error!.code ?? "unknown"), message: raw.error!.message } as SharedRun["error"] } : {}),
+  };
+}
+
+/**
+ * lastRun comes from any peer in the room, so every field is untrusted. Coerce it to a
+ * well-formed RunResult so one malformed update cannot crash every participant's output panel.
+ */
+function normalizeRunResult(raw: Partial<RunResult>): RunResult {
+  const str = (value: unknown) => (typeof value === "string" ? value : "");
+  const num = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : null);
+  return {
+    status: { id: raw.status!.id, description: str(raw.status?.description) || "Finished" },
+    stdout: str(raw.stdout),
+    stderr: str(raw.stderr),
+    compileOutput: str(raw.compileOutput),
+    message: str(raw.message),
+    time: num(raw.time),
+    memory: num(raw.memory),
+    truncated: Boolean(raw.truncated),
   };
 }

@@ -52,7 +52,11 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
         <div className="ml-auto flex items-center gap-3">
           <ConnectionStatus />
           <ParticipantList />
-          <Link href="/" className="rounded text-xs text-muted transition hover:text-fg">
+          <Link
+            href="/"
+            onClick={() => useRoomStore.getState().leave()}
+            className="rounded text-xs text-muted transition hover:text-fg"
+          >
             Leave
           </Link>
         </div>

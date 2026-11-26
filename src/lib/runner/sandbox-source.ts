@@ -144,13 +144,15 @@ self.onmessage = async function (event) {
     pyodide.setStderr({ batched: (s) => emit("stderr", s + "\n") });
     const lines = m.stdin ? m.stdin.split("\n") : [];
     pyodide.setStdin({ stdin: () => (lines.length ? lines.shift() : undefined) });
+    // Free the per-run globals even when the user's code raises, or the long-lived worker leaks.
+    const globals = pyodide.globals.get("dict")();
     try {
-      const globals = pyodide.globals.get("dict")();
       await pyodide.runPythonAsync(m.code, { globals });
-      globals.destroy();
       post({ type: "done", ok: true });
     } catch (err) {
       post({ type: "done", ok: false, error: String((err && err.message) || err) });
+    } finally {
+      globals.destroy();
     }
   }
 };
