@@ -45,7 +45,7 @@ describe("useRunCode in-browser languages", () => {
     text.insert(0, "console.log(6 * 7)");
     // onUnhandledFrame: "error" proves nothing is sent to the API route.
     const { result } = renderHook(() => useRunCode("Asha", ""));
-    await act(() => result.current());
+    await act(() => result.current.run());
     expect(readLastRun(doc)).toMatchObject({ by: "Asha", language: "javascript", runtime: "browser", result: { stdout: "42\n" } });
     expect(useRoomStore.getState().isRunning).toBe(false);
   });
@@ -73,7 +73,7 @@ describe("useRunCode", () => {
     const { result } = renderHook(() => useRunCode("Asha", "hi"));
     let pending!: Promise<void>;
     act(() => {
-      pending = result.current();
+      pending = result.current.run();
     });
     expect(useRoomStore.getState().isRunning).toBe(true);
     await act(() => pending);
@@ -83,6 +83,26 @@ describe("useRunCode", () => {
     expect(readLastRun(doc)).toMatchObject({ by: "Asha", language: "java", runtime: "judge0", result: { stdout: "hi\n" } });
   });
 
+  it("cancel stops the run at once and publishes nothing", async () => {
+    server.use(
+      http.post(API, async () => {
+        await delay(200);
+        return HttpResponse.json({ error: { code: "upstream_error", message: "late" } }, { status: 502 });
+      }),
+    );
+    const { result } = renderHook(() => useRunCode("Asha", ""));
+    let pending!: Promise<void>;
+    act(() => {
+      pending = result.current.run();
+    });
+    expect(useRoomStore.getState().isRunning).toBe(true);
+    act(() => result.current.cancel());
+    expect(useRoomStore.getState().isRunning).toBe(false);
+    await act(() => pending);
+    expect(useRoomStore.getState().isRunning).toBe(false);
+    expect(readLastRun(doc)).toBeNull();
+  });
+
   it("keeps configuration errors local instead of broadcasting them", async () => {
     server.use(
       http.post(API, () =>
@@ -90,7 +110,7 @@ describe("useRunCode", () => {
       ),
     );
     const { result } = renderHook(() => useRunCode("Asha", ""));
-    await act(() => result.current());
+    await act(() => result.current.run());
     expect(readLastRun(doc)).toBeNull();
     expect(useRoomStore.getState().lastRun).toMatchObject({ error: { code: "not_configured" } });
   });
@@ -98,7 +118,7 @@ describe("useRunCode", () => {
   it("reports network failures without throwing", async () => {
     server.use(http.post(API, () => HttpResponse.error()));
     const { result } = renderHook(() => useRunCode("Asha", ""));
-    await act(() => result.current());
+    await act(() => result.current.run());
     expect(useRoomStore.getState().lastRun).toMatchObject({ error: { code: "network" } });
     expect(useRoomStore.getState().isRunning).toBe(false);
   });
@@ -113,7 +133,7 @@ describe("useRunCode", () => {
       }),
     );
     const { result } = renderHook(() => useRunCode("Asha", ""));
-    await act(() => Promise.all([result.current(), result.current()]));
+    await act(() => Promise.all([result.current.run(), result.current.run()]));
     expect(calls).toBe(1);
   });
 });
