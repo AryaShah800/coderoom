@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type FormEvent } from "react";
+import { useEffect, useId, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createRoomId, parseRoomInput } from "@/lib/room-id";
 
@@ -11,6 +11,16 @@ export function HomeActions() {
   const [creating, setCreating] = useState(false);
   const inputId = useId();
   const errorId = useId();
+
+  // Coming back with the browser's Back button can restore this page from the bfcache
+  // with "Creating room…" still set; re-enable the button when that happens.
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) setCreating(false);
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, []);
 
   const createRoom = () => {
     setCreating(true);

@@ -44,6 +44,7 @@ export default function CodeEditor({ onRun }: { onRun: () => void }) {
   const collab = useRoomStore((s) => s.collab);
   const language = useRoomStore((s) => s.language);
   const [editor, setEditor] = useState<MonacoEditor.IStandaloneCodeEditor | null>(null);
+  const [syncLoadFailed, setSyncLoadFailed] = useState(false);
   const onRunRef = useRef(onRun);
 
   useEffect(() => {
@@ -61,10 +62,16 @@ export default function CodeEditor({ onRun }: { onRun: () => void }) {
     if (!model) return;
     let cancelled = false;
     let binding: { destroy: () => void } | null = null;
-    import("y-monaco").then(({ MonacoBinding }) => {
-      if (cancelled) return;
-      binding = new MonacoBinding(getShared(collab.doc).text, model, new Set([editor]), collab.provider.awareness);
-    });
+    import("y-monaco")
+      .then(({ MonacoBinding }) => {
+        if (cancelled) return;
+        binding = new MonacoBinding(getShared(collab.doc).text, model, new Set([editor]), collab.provider.awareness);
+      })
+      .catch((error: unknown) => {
+        // Without the binding, typing would silently stay local. Say so instead.
+        console.error("Could not load the editor sync module", error);
+        if (!cancelled) setSyncLoadFailed(true);
+      });
     return () => {
       cancelled = true;
       binding?.destroy();
@@ -88,6 +95,21 @@ export default function CodeEditor({ onRun }: { onRun: () => void }) {
     awareness.on("update", reveal);
     return () => awareness.off("update", reveal);
   }, [editor, collab, followId]);
+
+  if (syncLoadFailed) {
+    return (
+      <div role="alert" className="flex h-full flex-col items-center justify-center gap-3 p-6 text-center text-sm text-muted">
+        <p>The editor could not connect to the room. Your connection may have dropped while the page was loading.</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="inline-flex h-8 items-center rounded-md bg-accent px-4 text-sm font-semibold text-accent-ink transition hover:brightness-110"
+        >
+          Reload the room
+        </button>
+      </div>
+    );
+  }
 
   return (
     <Editor
