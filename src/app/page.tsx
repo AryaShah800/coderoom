@@ -12,7 +12,7 @@ const FEATURES = [
   },
   {
     title: "Pick a language, run it",
-    body: "Eight languages with syntax highlighting. Run sends the code to a Judge0 sandbox through a server-side route.",
+    body: "Eight languages with syntax highlighting. JavaScript, TypeScript and Python run right in your browser; compiled languages run on a Judge0 sandbox when one is configured.",
   },
   {
     title: "Keeps working offline",

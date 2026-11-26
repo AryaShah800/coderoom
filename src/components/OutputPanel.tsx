@@ -72,7 +72,7 @@ export function OutputPanel({ run, isRunning, configured, selfName, language, ph
 
       {!isRunning && !run && (language === undefined || !needsJudge0(language) || configured !== false) && (
         <p className="text-sm text-muted">
-          Press <kbd className="rounded border border-line-strong px-1 font-mono text-xs">Ctrl</kbd> +{" "}
+          Press <kbd className="rounded border border-line-strong px-1 font-mono text-xs">Ctrl/⌘</kbd> +{" "}
           <kbd className="rounded border border-line-strong px-1 font-mono text-xs">Enter</kbd> or Run to execute the code.
           Output is shared with everyone in the room.
         </p>
