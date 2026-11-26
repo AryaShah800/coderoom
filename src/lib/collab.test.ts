@@ -82,4 +82,24 @@ describe("shared run output", () => {
     meta.set("lastRun", "nonsense");
     expect(readLastRun(doc)).toBeNull();
   });
+
+  it("normalizes a partial run result from a peer instead of passing it through", () => {
+    const doc = new Y.Doc();
+    getShared(doc).meta.set("lastRun", {
+      by: "x",
+      language: "python",
+      at: 1,
+      result: { status: { id: 3 }, stdout: 42, time: "fast", memory: Number.NaN },
+    });
+    expect(readLastRun(doc)?.result).toEqual({
+      status: { id: 3, description: "Finished" },
+      stdout: "",
+      stderr: "",
+      compileOutput: "",
+      message: "",
+      time: null,
+      memory: null,
+      truncated: false,
+    });
+  });
 });
