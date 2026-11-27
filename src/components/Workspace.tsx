@@ -39,7 +39,7 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
   return (
     <div className="flex h-dvh flex-col">
       <RemoteCursorStyles />
-      <header className="flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-line bg-panel px-4 py-2">
+      <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line bg-panel px-3 py-2 sm:gap-x-4 sm:px-4">
         <Logo compact />
         <div className="flex items-center gap-2 font-mono text-xs text-muted">
           <span className="hidden sm:inline">room</span>
@@ -49,25 +49,25 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
         </div>
         <CopyLinkButton roomId={roomId} />
         <ExportButton roomId={roomId} />
-        <div className="ml-auto flex items-center gap-3">
+        <div className="flex min-w-0 basis-full flex-wrap items-center gap-2 sm:ml-auto sm:basis-auto sm:gap-3">
           <ConnectionStatus />
           <ParticipantList />
           <Link
             href="/"
             onClick={() => useRoomStore.getState().leave()}
-            className="rounded text-xs text-muted transition hover:text-fg"
+            className="inline-flex min-h-10 items-center rounded px-2 text-xs text-muted transition hover:text-fg"
           >
             Leave
           </Link>
         </div>
       </header>
       <ConnectionBanner />
-      <RoomLifetimeNotice ttlMinutes={ROOM_EMPTY_TTL_MINUTES} />
+      <RoomLifetimeNotice roomId={roomId} ttlMinutes={ROOM_EMPTY_TTL_MINUTES} />
       <FollowBanner />
 
-      <main id="main" className="grid min-h-0 flex-1 grid-rows-[minmax(320px,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_380px] lg:grid-rows-1">
-        <section aria-labelledby="editor-heading" className="flex min-h-0 flex-col border-line lg:border-r">
-          <div className="flex flex-wrap items-center gap-3 border-b border-line bg-panel px-4 py-2">
+      <main id="main" className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[minmax(min-content,1fr)_auto] lg:grid-cols-[minmax(0,1fr)_380px] lg:grid-rows-1">
+        <section aria-labelledby="editor-heading" className="flex min-h-[320px] min-w-0 flex-col border-line lg:min-h-0 lg:border-r">
+          <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line bg-panel px-3 py-2 sm:gap-3 sm:px-4">
             <h2 id="editor-heading" className="sr-only">
               Editor
             </h2>
@@ -78,7 +78,7 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
               disabled={!collab || isRunning || runBlocked}
               aria-describedby={noteId}
               aria-keyshortcuts="Control+Enter Meta+Enter"
-              className="inline-flex h-8 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-accent-ink transition hover:brightness-110 disabled:opacity-60"
+              className="inline-flex h-10 items-center gap-2 rounded-md bg-accent px-4 text-sm font-semibold text-accent-ink transition hover:brightness-110 disabled:opacity-60"
             >
               <span aria-hidden="true">▶</span>
               {isRunning ? "Running…" : "Run"}
@@ -87,7 +87,7 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
               <button
                 type="button"
                 onClick={cancel}
-                className="inline-flex h-8 items-center gap-2 rounded-md border border-line-strong bg-panel-2 px-3 text-sm font-medium transition hover:border-bad hover:text-bad"
+                className="inline-flex h-10 items-center gap-2 rounded-md border border-line-strong bg-panel-2 px-3 text-sm font-medium transition hover:border-bad hover:text-bad"
               >
                 <span aria-hidden="true">■</span>
                 Stop
@@ -100,14 +100,14 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
               <kbd className="font-mono">Ctrl+M</kbd> lets Tab leave the editor
             </p>
           </div>
-          <div className="min-h-0 flex-1" data-testid="editor-host">
+          <div className="min-h-[200px] min-w-0 flex-1 lg:min-h-0" data-testid="editor-host">
             <CodeEditor onRun={() => void run()} />
           </div>
         </section>
 
-        <aside aria-labelledby="output-heading" className="flex min-h-0 flex-col gap-4 overflow-auto border-t border-line bg-panel p-4 lg:border-t-0">
+        <aside aria-labelledby="output-heading" className="flex max-h-[42dvh] min-h-0 min-w-0 flex-col gap-4 overflow-auto border-t border-line bg-panel p-4 lg:max-h-none lg:border-t-0">
           <details className="group rounded-md border border-line bg-panel-2">
-            <summary className="cursor-pointer px-3 py-2 text-sm font-medium select-none">
+            <summary className="min-h-10 cursor-pointer px-3 py-2 text-sm font-medium select-none">
               Program input (stdin){stdin ? " · set" : ""}
             </summary>
             <div className="px-3 pb-3">

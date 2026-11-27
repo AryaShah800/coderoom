@@ -22,11 +22,11 @@ export function CopyLinkButton({ roomId }: { roomId: string }) {
   };
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
       <button
         type="button"
         onClick={copy}
-        className="inline-flex h-8 min-w-[9.5rem] items-center justify-center gap-2 rounded-md border border-line-strong bg-panel-2 px-3 text-xs font-medium transition hover:border-muted"
+        className="inline-flex h-10 min-w-[9.5rem] items-center justify-center gap-2 rounded-md border border-line-strong bg-panel-2 px-3 text-xs font-medium transition hover:border-muted"
       >
         <span aria-hidden="true">{state === "copied" ? "✓" : "⧉"}</span>
         {/* The label swaps in place, so the header doesn't shift when the link is copied. */}

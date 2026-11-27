@@ -16,7 +16,7 @@ interface LanguageSelectProps {
 export function LanguageSelect({ value, onChange, disabled, judge0Configured }: LanguageSelectProps) {
   const id = useId();
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 max-w-full items-center gap-2">
       <label htmlFor={id} className="text-xs font-medium text-muted">
         Language
       </label>
@@ -27,7 +27,7 @@ export function LanguageSelect({ value, onChange, disabled, judge0Configured }: 
         onChange={(e) => {
           if (isLanguageKey(e.target.value)) onChange(e.target.value);
         }}
-        className="h-8 rounded-md border border-line-strong bg-panel-2 px-2 text-sm text-fg disabled:opacity-60"
+        className="h-10 min-w-0 rounded-md border border-line-strong bg-panel-2 px-2 text-sm text-fg disabled:opacity-60"
       >
         {LANGUAGES.map((language) => (
           <option key={language.key} value={language.key}>
