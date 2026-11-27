@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { getLanguage, needsJudge0, type LanguageKey } from "@/lib/languages";
 import { isSuccessfulRun, type RunResult } from "@/lib/run-contract";
 import type { SharedRun } from "@/lib/collab";
@@ -27,11 +28,50 @@ export function summarizeRun(run: SharedRun, selfName: string): string {
   return `${who} finished: ${result.status.description}. ${lines} line${lines === 1 ? "" : "s"} of output.`;
 }
 
-function Stream({ label, text, tone }: { label: string; text: string; tone?: "bad" }) {
+function CopyStreamButton({ label, text }: { label: string; text: string }) {
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle");
+
+  useEffect(() => {
+    if (state !== "copied") return;
+    const timer = setTimeout(() => setState("idle"), 1500);
+    return () => clearTimeout(timer);
+  }, [state]);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setState("copied");
+    } catch {
+      setState("failed");
+    }
+  };
+
+  if (!text) return null;
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button
+        type="button"
+        onClick={copy}
+        aria-label={`Copy ${label}`}
+        className="inline-flex h-10 w-20 shrink-0 items-center justify-center rounded-md border border-line-strong bg-panel-2 px-3 text-xs font-medium text-fg transition hover:border-muted"
+      >
+        {state === "copied" ? "Copied" : "Copy"}
+      </button>
+      <span role="status" aria-live="polite" className={state === "failed" ? "text-xs text-muted" : "sr-only"}>
+        {state === "copied" ? `${label} copied` : state === "failed" ? "Copy failed. Select the text and copy it manually." : ""}
+      </span>
+    </div>
+  );
+}
+
+function Stream({ label, copyLabel, text, tone }: { label: string; copyLabel: string; text: string; tone?: "bad" }) {
   if (!text) return null;
   return (
     <section aria-label={label} className="flex flex-col gap-1">
-      <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">{label}</h3>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-xs font-semibold tracking-wide text-muted uppercase">{label}</h3>
+        <CopyStreamButton key={text} label={copyLabel} text={text} />
+      </div>
       <pre
         tabIndex={0}
         className={`max-h-72 overflow-auto rounded-md border border-line bg-ink p-3 font-mono text-[13px] leading-relaxed whitespace-pre-wrap break-words ${tone === "bad" ? "text-bad" : "text-fg"}`}
@@ -84,6 +124,7 @@ export function OutputPanel({ run, isRunning, configured, selfName, language, ph
             {run.error.code === "not_configured" ? "Run is not configured here" : "Could not run the code"}
           </p>
           <p className="mt-1">{run.error.message}</p>
+          <CopyStreamButton key={run.error.message} label="error" text={run.error.message} />
           <p className="mt-2 text-xs text-muted">
             {run.by === selfName ? "You" : run.by} tried {getLanguage(run.language).label}
           </p>
@@ -107,10 +148,10 @@ export function OutputPanel({ run, isRunning, configured, selfName, language, ph
               {run.runtime === "browser" ? " (in browser)" : run.runtime === "judge0" ? " (Judge0)" : ""}
             </span>
           </div>
-          <Stream label="Output" text={run.result.stdout} />
-          <Stream label="Compiler output" text={run.result.compileOutput} tone="bad" />
-          <Stream label="Errors" text={run.result.stderr} tone="bad" />
-          <Stream label="Message" text={run.result.message} />
+          <Stream label="Output" copyLabel="stdout" text={run.result.stdout} />
+          <Stream label="Compiler output" copyLabel="compiler output" text={run.result.compileOutput} tone="bad" />
+          <Stream label="Errors" copyLabel="stderr" text={run.result.stderr} tone="bad" />
+          <Stream label="Message" copyLabel="message" text={run.result.message} />
           {!run.result.stdout && !run.result.stderr && !run.result.compileOutput && (
             <p className="text-sm text-muted">The program finished with no output.</p>
           )}
