@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { OutputPanel, summarizeRun } from "./OutputPanel";
 import type { SharedRun } from "@/lib/collab";
 
@@ -20,6 +20,76 @@ const accepted: SharedRun = {
 };
 
 const liveRegion = () => document.querySelector("p[aria-live='polite']");
+
+describe("output copying", () => {
+  const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
+  const writeText = vi.fn();
+
+  beforeEach(() => {
+    writeText.mockReset().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    if (originalClipboard) Object.defineProperty(navigator, "clipboard", originalClipboard);
+    else Reflect.deleteProperty(navigator, "clipboard");
+  });
+
+  it.each([
+    ["stdout", "stdout"],
+    ["stderr", "stderr"],
+    ["compileOutput", "compiler output"],
+    ["message", "message"],
+  ] as const)("copies the full %s stream and resets the confirmation after 1.5 seconds", async (stream, label) => {
+    vi.useFakeTimers();
+    const text = "first line\n  second line\n";
+    const run: SharedRun = {
+      ...accepted,
+      result: { ...accepted.result!, stdout: "", [stream]: text },
+    };
+    render(<OutputPanel run={run} isRunning={false} configured selfName="Me" />);
+    expect(screen.getAllByRole("button", { name: /^Copy / })).toHaveLength(1);
+    const button = screen.getByRole("button", { name: `Copy ${label}` });
+
+    await act(async () => fireEvent.click(button));
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(text);
+    expect(button).toHaveTextContent("Copied");
+    act(() => vi.advanceTimersByTime(1499));
+    expect(button).toHaveTextContent("Copied");
+    act(() => vi.advanceTimersByTime(1));
+    expect(button).toHaveTextContent(/^Copy$/);
+  });
+
+  it("does not offer copying when all streams are empty", () => {
+    render(<OutputPanel run={{ ...accepted, result: { ...accepted.result!, stdout: "" } }} isRunning={false} configured selfName="Me" />);
+    expect(screen.queryByRole("button", { name: /^Copy / })).not.toBeInTheDocument();
+  });
+
+  it("copies request error text and hides the button for an empty error", async () => {
+    const run: SharedRun = { by: "Me", language: "c", at: 1, error: { code: "upstream_timeout", message: "Request timed out.\nTry again." } };
+    const { rerender } = render(<OutputPanel run={run} isRunning={false} configured selfName="Me" />);
+    const button = screen.getByRole("button", { name: "Copy error" });
+    await act(async () => fireEvent.click(button));
+    expect(writeText).toHaveBeenCalledExactlyOnceWith(run.error!.message);
+    expect(button).toHaveTextContent("Copied");
+
+    rerender(<OutputPanel run={{ ...run, error: { ...run.error!, message: "" } }} isRunning={false} configured selfName="Me" />);
+    expect(screen.queryByRole("button", { name: /^Copy / })).not.toBeInTheDocument();
+  });
+
+  it.each(["rejected", "unavailable"])("shows a manual-copy fallback when the clipboard is %s", async (failure) => {
+    if (failure === "rejected") writeText.mockRejectedValue(new Error("Clipboard denied"));
+    else Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
+    render(<OutputPanel run={accepted} isRunning={false} configured selfName="Me" />);
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Copy stdout" })));
+    const output = screen.getByRole("region", { name: "Output" });
+    expect(within(output).getByRole("status")).toHaveTextContent("Copy failed. Select the text and copy it manually.");
+    expect(within(output).getByRole("status")).toBeVisible();
+    expect(within(output).getByText(/one\s+two/)).toBeVisible();
+  });
+});
 
 describe("OutputPanel", () => {
   it("says up front when Run is not configured", () => {

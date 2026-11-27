@@ -33,7 +33,9 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
   const [stdin, setStdin] = useState("");
   const { run, cancel } = useRunCode(identity.name, stdin);
   const stdinId = useId();
+  const stdinNoteId = useId();
   const noteId = useId();
+  const ignoresStdin = language === "javascript" || language === "typescript";
   const runBlocked = needsJudge0(language) && configured === false;
 
   return (
@@ -107,7 +109,10 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
 
         <aside aria-labelledby="output-heading" className="flex max-h-[42dvh] min-h-0 min-w-0 flex-col gap-4 overflow-auto border-t border-line bg-panel p-4 lg:max-h-none lg:border-t-0">
           <details className="group rounded-md border border-line bg-panel-2">
-            <summary className="min-h-10 cursor-pointer px-3 py-2 text-sm font-medium select-none">
+            <summary className="flex min-h-10 cursor-pointer list-none items-center gap-2 px-3 py-2 text-sm font-medium select-none [&::-webkit-details-marker]:hidden">
+              <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" className="size-4 shrink-0 transition-transform group-open:rotate-90">
+                <path d="m6 4 4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
               Program input (stdin){stdin ? " · set" : ""}
             </summary>
             <div className="px-3 pb-3">
@@ -116,6 +121,7 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
               </label>
               <textarea
                 id={stdinId}
+                aria-describedby={ignoresStdin ? stdinNoteId : undefined}
                 value={stdin}
                 onChange={(e) => setStdin(e.target.value)}
                 maxLength={MAX_STDIN_CHARS}
@@ -124,6 +130,11 @@ export function Workspace({ roomId, identity }: { roomId: string; identity: Part
                 placeholder="Text your program reads from standard input"
                 className="w-full rounded-md border border-line-strong bg-ink p-2 font-mono text-[13px] text-fg placeholder:text-muted"
               />
+              {ignoresStdin && (
+                <p id={stdinNoteId} className="mt-1 text-xs text-muted">
+                  JavaScript and TypeScript run in your browser and don&apos;t read stdin.
+                </p>
+              )}
             </div>
           </details>
           <h2 id="output-heading" className="text-sm font-semibold">
