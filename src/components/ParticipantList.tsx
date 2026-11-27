@@ -18,11 +18,11 @@ export function ParticipantList() {
 
   return (
     <div className="flex items-center gap-2">
-      <ul aria-label={`People in this room: ${count}`} className="flex -space-x-2">
+      <ul aria-label={`People in this room: ${count}`} className="flex gap-1 sm:-space-x-2 sm:gap-0">
         {visible.map((p) => {
           const isTyping = typingIds.includes(p.clientId) && !p.isSelf;
           const isFollowed = followId === p.clientId;
-          const ring = `grid size-8 place-items-center rounded-full border-2 text-xs font-bold text-ink ${isFollowed ? "border-fg" : "border-ink"} ${isTyping ? "animate-pulse" : ""}`;
+          const ring = `grid size-10 place-items-center rounded-full border-2 text-xs font-bold text-ink ${isFollowed ? "border-fg" : "border-ink"} ${isTyping ? "animate-pulse" : ""}`;
           return (
             <li key={p.clientId} title={p.isSelf ? `${p.name} (you)` : `${isFollowed ? "Stop following" : "Follow"} ${p.name}`} data-typing={isTyping || undefined}>
               {p.isSelf ? (
@@ -46,7 +46,7 @@ export function ParticipantList() {
           );
         })}
         {hidden > 0 && (
-          <li className="grid size-8 place-items-center rounded-full border-2 border-ink bg-line-strong text-xs font-semibold">
+          <li className="grid size-10 place-items-center rounded-full border-2 border-ink bg-line-strong text-xs font-semibold">
             +{hidden}
           </li>
         )}
@@ -83,7 +83,7 @@ export function FollowBanner() {
     <div role="status" className="flex items-center gap-3 border-b border-line bg-panel-2 px-4 py-1.5 text-xs">
       <span className="size-2 rounded-full" style={{ backgroundColor: who.color }} aria-hidden="true" />
       <span data-testid="follow-banner">Following {who.name}: your view scrolls to their cursor.</span>
-      <button type="button" onClick={() => follow(null)} className="rounded font-semibold text-accent hover:underline">
+      <button type="button" onClick={() => follow(null)} className="min-h-10 shrink-0 rounded font-semibold text-accent hover:underline">
         Stop following
       </button>
     </div>
